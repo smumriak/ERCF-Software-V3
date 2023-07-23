@@ -520,8 +520,6 @@ class Ercf:
                 self.gear_endstop = endstop
         if self.selector_endstop == None:
             raise self.config.error("Selector endstop must be specified")
-        if self.sensorless_selector and self.gear_endstop == None:
-            raise self.config.error("Gear stepper endstop must be configured for sensorless selector operation")
 
         # Get servo and encoder
         self.servo = self.printer.lookup_object('ercf_servo ercf_servo', None)
@@ -1456,13 +1454,8 @@ class Ercf:
             init_position = self.selector_stepper.get_position()[0]
             init_mcu_pos = self.selector_stepper.steppers[0].get_mcu_position()
             self.selector_stepper.do_set_position(0.)
-            found_home = False
             try:
                 self._selector_stepper_move_wait(-move_length, speed=60, homing_move=1)
-                if self.sensorless_selector == 1:
-                    found_home = self._check_selector_endstop()
-                else:
-                    found_home = True
             except Exception as e:
                 # Home definitely not found
                 pass
@@ -1470,13 +1463,10 @@ class Ercf:
             traveled = abs(mcu_position - init_mcu_pos) * selector_steps
 
             # Test we actually homed, if not we didn't move far enough
-            if not found_home:
-                self._log_always("Selector didn't find home position. Are you sure you selected the correct tool/gate?")
-            else:
-                self._log_always("Selector position = %.1fmm" % traveled)
-                self.selector_offsets[gate] = round(traveled, 1)
-                self.gcode.run_script_from_command("SAVE_VARIABLE VARIABLE=%s VALUE=\"%s\"" % (self.VARS_ERCF_SELECTOR_OFFSETS, self.selector_offsets))
-                self._log_always("Selector offset (%.1fmm) for gate #%d has been saved" % (traveled, gate))
+            self._log_always("Selector position = %.1fmm" % traveled)
+            self.selector_offsets[gate] = round(traveled, 1)
+            self.gcode.run_script_from_command("SAVE_VARIABLE VARIABLE=%s VALUE=\"%s\"" % (self.VARS_ERCF_SELECTOR_OFFSETS, self.selector_offsets))
+            self._log_always("Selector offset (%.1fmm) for gate #%d has been saved" % (traveled, gate))
         except ErcfError as ee:
             self._pause(str(ee))
         finally:
@@ -2265,25 +2255,33 @@ class Ercf:
 
             if self.loaded_status == self.LOADED_STATUS_PARTIAL_END_OF_BOWDEN and self._has_toolhead_sensor():
                 # This error case can occur when home to sensor failed and we may be stuck in extruder
+                self._log_always("Unloading from extruder")
                 self._unload_extruder()
+                self._log_always("Unloading from encoder, length: %d" % length)
                 self._unload_encoder(length) # Full slow unload
                 self._set_gate_status(self.gate_selected, self.GATE_AVAILABLE_FROM_BUFFER)
 
             elif self.loaded_status >= self.LOADED_STATUS_PARTIAL_HOMED_SENSOR:
                 # Exit extruder, fast unload of bowden, then slow unload encoder
+                self._log_always("Unloading from extruder")
                 self._unload_extruder()
+                self._log_always("Unloading bowden, length: %d" % length - self.unload_buffer)
                 self._unload_bowden(length - self.unload_buffer, skip_sync_move=skip_sync_move)
+                self._log_always("Unloading from encoder, length: %d" % self.unload_buffer)
                 self._unload_encoder(self.unload_buffer)
                 self._set_gate_status(self.gate_selected, self.GATE_AVAILABLE_FROM_BUFFER)
 
             elif self.loaded_status >= self.LOADED_STATUS_PARTIAL_HOMED_EXTRUDER:
                 # fast unload of bowden, then slow unload encoder
+                self._log_always("Unloading bowden, length: %d" % length - self.unload_buffer)
                 self._unload_bowden(length - self.unload_buffer, skip_sync_move=skip_sync_move)
+                self._log_always("Unloading from encoder, length: %d" % self.unload_buffer)
                 self._unload_encoder(self.unload_buffer)
                 self._set_gate_status(self.gate_selected, self.GATE_AVAILABLE_FROM_BUFFER)
 
             elif self.loaded_status >= self.LOADED_STATUS_PARTIAL_BEFORE_ENCODER:
                 # Have to do slow unload because we don't know exactly where we are
+                self._log_always("Unloading from encoder, length: %d" % length)
                 self._unload_encoder(length) # Full slow unload
 
             else:
@@ -2597,12 +2595,10 @@ class Ercf:
             try:
                 self.selector_stepper.do_set_position(0.)
                 self._selector_stepper_move_wait(-selector_length, speed=60, homing_move=1)
-                self.is_homed = self._check_selector_endstop()
-                if not self.is_homed:
-                    self._set_tool_selected(self.TOOL_UNKNOWN)
-                    raise ErcfError("Homing selector failed because of blockage")
+                self.is_homed = True
             except Exception as e:
                 # Error, stallguard didn't trigger
+                _set_tool_selected(self.TOOL_UNKNOWN)
                 raise ErcfError("Homing selector failed because error. Klipper reports: %s" % str(e))
         else:
             try:
@@ -2619,27 +2615,10 @@ class Ercf:
                 raise ErcfError("Homing selector failed because of blockage or malfunction")
         self.selector_stepper.do_set_position(0.)
 
-    # Give Klipper several chances to give the right answer
-    # No idea what's going on with Klipper but it can give erroneous not TRIGGERED readings
-    # (perhaps because of bounce in switch or message delays) so this is a workaround
-    # TODO: check if this is still required after homing logic change and Klipper bug fix
-    def _check_selector_endstop(self):
-        homed = False
-        for i in range(4):
-            last_move_time = self.toolhead.get_last_move_time()
-            if self.sensorless_selector == 1:
-                homed = bool(self.gear_endstop.query_endstop(last_move_time))
-            else:
-                homed = bool(self.selector_endstop.query_endstop(last_move_time))
-            self._log_debug("Check #%d of %s_endstop: %s" % (i+1, ("gear" if self.sensorless_selector == 1 else "selector"), homed))
-            if homed:
-                break
-            self.toolhead.dwell(0.1)
-        return homed
-
     def _move_selector_sensorless(self, target):
         successful, travel = self._attempt_selector_move(target)
         if not successful:
+            self._log_always("Distance traveled: %.1fmm" % abs(travel))
             if abs(travel) < 3.0:       # Filament stuck in the current selector
                 self._log_info("Selector is blocked by inside filament, trying to recover...")
                 # Realign selector
@@ -2675,9 +2654,11 @@ class Ercf:
             else :                          # Selector path is blocked, probably not internally
                 self.is_homed = False
                 self._unselect_tool()
+                self._log_always("Distance traveled: %.1fmm" % abs(travel))
                 raise ErcfError("Selector path is probably externally blocked")
 
     def _attempt_selector_move(self, target):
+        self._log_trace("Attempting to move selector. Target move: %d" % target)
         selector_steps = self.selector_stepper.steppers[0].get_step_dist()
         init_position = self.selector_stepper.get_position()[0]
         init_mcu_pos = self.selector_stepper.steppers[0].get_mcu_position()
