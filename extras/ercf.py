@@ -73,7 +73,7 @@ class ErcfError(Exception):
 class Ercf:
     BOOT_DELAY = 1.5            # Delay before running bootup tasks
 
-    LONG_MOVE_THRESHOLD = 70.   # This is also the initial move to load past encoder
+    LONG_MOVE_THRESHOLD = 100.   # This is also the initial move to load past encoder
     ENCODER_MIN = 1.0           # The threshold (mm) that determines real encoder movement (ignore erroneous pulse)
 
     SERVO_DOWN_STATE = 1
@@ -188,7 +188,7 @@ class Ercf:
         self.apply_bowden_correction = config.getint('apply_bowden_correction', 0, minval=0, maxval=1)
         self.load_bowden_tolerance = config.getfloat('load_bowden_tolerance', 10., minval=1.)
         self.unload_bowden_tolerance = config.getfloat('unload_bowden_tolerance', self.load_bowden_tolerance, minval=1.)
-        self.parking_distance = config.getfloat('parking_distance', 23., minval=12., maxval=60.)
+        self.parking_distance = config.getfloat('parking_distance', 23., minval=12., maxval=120.)
         self.encoder_move_step_size = config.getfloat('encoder_move_step_size', 15., minval=5., maxval=25.)
         self.load_encoder_retries = config.getint('load_encoder_retries', 2, minval=1, maxval=5)
         self.selector_offsets = list(config.getfloatlist('colorselector'))
@@ -1228,34 +1228,31 @@ class Ercf:
                 self._home_to_extruder(extruder_homing_length)
                 measured_movement = self.encoder_sensor.get_distance()
                 spring = self._servo_up()
+                self._log_always("Spring: %.1f" % spring)
                 reference = measured_movement - (spring * 0.1)
-                if spring > 0:
-                    if self._must_home_to_extruder():
-                        # Home to extruder step is enabled so we don't need any spring
-                        # in filament since we will do it again on every load
-                        reference = measured_movement - (spring * 1.0)
-                    elif self.sync_load_length > 0:
-                        # Synchronized load makes the transition from gear stepper to extruder stepper
-                        # work reliably so we don't need spring tension in the bowden
-                        if self._has_toolhead_sensor():
-                            # We have a toolhead sensor so the extruder entrance isn't the reference
-                            # homing point and therefore not critical to press against it. Relax tension
-                            reference = measured_movement - (spring * 1.1)
-                        else:
-                            # We need a little bit of tension because sync load is more reliable in
-                            # picking up filament but we still rely on the extruder as home point
-                            reference = measured_movement - (spring * 0.5)
+                if self._must_home_to_extruder():
+                    # Home to extruder step is enabled so we don't need any spring
+                    # in filament since we will do it again on every load
+                    reference = measured_movement - (spring * 1.0)
+                elif self.sync_load_length > 0:
+                    # Synchronized load makes the transition from gear stepper to extruder stepper
+                    # work reliably so we don't need spring tension in the bowden
+                    if self._has_toolhead_sensor():
+                        # We have a toolhead sensor so the extruder entrance isn't the reference
+                        # homing point and therefore not critical to press against it. Relax tension
+                        reference = measured_movement - (spring * 1.1)
+                    else:
+                        # We need a little bit of tension because sync load is more reliable in
+                        # picking up filament but we still rely on the extruder as home point
+                        reference = measured_movement - (spring * 0.5)
 
-                    msg = "Pass #%d: Filament homed to extruder, encoder measured %.1fmm, " % (i+1, measured_movement)
-                    msg += "filament sprung back %.1fmm" % spring
-                    msg += "\n- Calibration reference based on this pass is %.1f" % reference
-                    self._log_always(msg)
-                    reference_sum += reference
-                    spring_max = max(spring, spring_max)
-                    successes += 1
-                else:
-                    # No spring means we haven't reliably homed
-                    self._log_always("Failed to detect a reliable home position on this attempt")
+                msg = "Pass #%d: Filament homed to extruder, encoder measured %.1fmm, " % (i+1, measured_movement)
+                msg += "filament sprung back %.1fmm" % spring
+                msg += "\n- Calibration reference based on this pass is %.1f" % reference
+                self._log_always(msg)
+                reference_sum += reference
+                spring_max = max(spring, spring_max)
+                successes += 1
 
                 self.encoder_sensor.reset_counts()    # Encoder 0000
                 self._unload_bowden(reference - self.unload_buffer)
@@ -1448,7 +1445,7 @@ class Ercf:
         try:
             self.calibrating = True
             self._servo_up()
-            move_length = 10. + gate*self.filamentblock_width + (gate//3)*5 + (self.bypass_offset > 0)
+            move_length = 10. + gate*self.filamentblock_width + (gate//3)*5 + (self.bypass_offset > 0) + 30
             self._log_always("Measuring the selector position for gate %d" % gate)
             selector_steps = self.selector_stepper.steppers[0].get_step_dist()
             init_position = self.selector_stepper.get_position()[0]
@@ -2265,23 +2262,18 @@ class Ercf:
                 # Exit extruder, fast unload of bowden, then slow unload encoder
                 self._log_always("Unloading from extruder")
                 self._unload_extruder()
-                self._log_always("Unloading bowden, length: %d" % length - self.unload_buffer)
                 self._unload_bowden(length - self.unload_buffer, skip_sync_move=skip_sync_move)
-                self._log_always("Unloading from encoder, length: %d" % self.unload_buffer)
                 self._unload_encoder(self.unload_buffer)
                 self._set_gate_status(self.gate_selected, self.GATE_AVAILABLE_FROM_BUFFER)
 
             elif self.loaded_status >= self.LOADED_STATUS_PARTIAL_HOMED_EXTRUDER:
                 # fast unload of bowden, then slow unload encoder
-                self._log_always("Unloading bowden, length: %d" % length - self.unload_buffer)
                 self._unload_bowden(length - self.unload_buffer, skip_sync_move=skip_sync_move)
-                self._log_always("Unloading from encoder, length: %d" % self.unload_buffer)
                 self._unload_encoder(self.unload_buffer)
                 self._set_gate_status(self.gate_selected, self.GATE_AVAILABLE_FROM_BUFFER)
 
             elif self.loaded_status >= self.LOADED_STATUS_PARTIAL_BEFORE_ENCODER:
                 # Have to do slow unload because we don't know exactly where we are
-                self._log_always("Unloading from encoder, length: %d" % length)
                 self._unload_encoder(length) # Full slow unload
 
             else:
@@ -2486,7 +2478,7 @@ class Ercf:
             # Large enough delta here means we are out of the encoder
             if delta >= self.encoder_move_step_size * 0.2: # 20 %
                 self._set_loaded_status(self.LOADED_STATUS_PARTIAL_BEFORE_ENCODER)
-                park = self.parking_distance - delta # will be between 8 and 20mm (for 23mm parking_distance, 15mm step)
+                park = self.parking_distance - delta# will be between 8 and 20mm (for 23mm parking_distance, 15mm step)
                 delta = self._trace_filament_move("Final parking", -park)
                 # We don't expect any movement of the encoder unless it is free-spinning
                 if park - delta > 1.0: # We expect 0, but relax the test a little
@@ -2588,7 +2580,7 @@ class Ercf:
         self.gate_selected = self.TOOL_UNKNOWN
         self._servo_up()
         num_channels = len(self.selector_offsets)
-        selector_length = 10. + (num_channels-1)*self.filamentblock_width + ((num_channels-1)//3)*5. + (self.bypass_offset > 0)
+        selector_length = 10. + (num_channels-1)*self.filamentblock_width + ((num_channels-1)//3)*5. + (self.bypass_offset > 0) + 30
         self._log_debug("Moving up to %.1fmm to home a %d channel ERCF" % (selector_length, num_channels))
         self.toolhead.wait_moves()
         if self.sensorless_selector == 1:
@@ -2669,7 +2661,7 @@ class Ercf:
         delta = abs(target_move - travel)
         self._log_trace("Selector moved %.1fmm of intended travel from: %.1fmm to: %.1fmm (delta: %.1fmm)"
                         % (travel, init_position, target, delta))
-        if delta <= 1.0 :
+        if delta <= 1.7 : # stupid magic bullshit constant
             # True up position
             self._log_trace("Truing selector %.1fmm to %.1fmm" % (delta, target))
             self.selector_stepper.do_set_position(init_position + travel)
