@@ -73,7 +73,7 @@ class ErcfError(Exception):
 class Ercf:
     BOOT_DELAY = 1.5            # Delay before running bootup tasks
 
-    LONG_MOVE_THRESHOLD = 100.   # This is also the initial move to load past encoder
+    LONG_MOVE_THRESHOLD = 85.   # This is also the initial move to load past encoder
     ENCODER_MIN = 1.0           # The threshold (mm) that determines real encoder movement (ignore erroneous pulse)
 
     SERVO_DOWN_STATE = 1
@@ -2254,7 +2254,7 @@ class Ercf:
                 # This error case can occur when home to sensor failed and we may be stuck in extruder
                 self._log_always("Unloading from extruder")
                 self._unload_extruder()
-                self._log_always("Unloading from encoder, length: %d" % length)
+                self._log_always("Unloading from encoder, length: %.1f" % length)
                 self._unload_encoder(length) # Full slow unload
                 self._set_gate_status(self.gate_selected, self.GATE_AVAILABLE_FROM_BUFFER)
 
@@ -2262,13 +2262,34 @@ class Ercf:
                 # Exit extruder, fast unload of bowden, then slow unload encoder
                 self._log_always("Unloading from extruder")
                 self._unload_extruder()
-                self._unload_bowden(length - self.unload_buffer, skip_sync_move=skip_sync_move)
-                self._unload_encoder(self.unload_buffer)
+                self._servo_down()
+                self._log_always("Move 1, 70")
+                delta = self._trace_filament_move("1", -70, speed=self.sync_unload_speed, motor="both", track=False)
+                self._log_always("Delta %.1f" % delta)
+                self._log_always("Move 2, %.1f" % (-760+70))
+                delta = self._trace_filament_move("2", -760+70, speed=self.long_moves_speed, track=False)
+                self._log_always("Delta %.1f" % delta)
+                self._log_always("Move 3, %.1f" % -33)
+                delta = self._trace_filament_move("3", -33, speed=20, track=False)
+                self._log_always("Delta %.1f" % delta)
+                self._log_always("Move 4, %.1f" % -10)
+                delta = self._trace_filament_move("4", -5, speed=20, track=False)
+                self._log_always("Delta %.1f" % delta)
+                self._servo_up()
+                self._set_loaded_status(self.LOADED_STATUS_UNLOADED)
                 self._set_gate_status(self.gate_selected, self.GATE_AVAILABLE_FROM_BUFFER)
+
+                # self._log_always("Unloading from extruder")
+                # self._unload_extruder()
+                # self._log_always("Unloading from bowden, length: %.1f" % (length))
+                # self._unload_bowden(length, skip_sync_move=skip_sync_move)
+                # self._log_always("Unloading fron encoder, length: %.1f" % self.unload_buffer)
+                # self._unload_encoder(self.unload_buffer)
+                # self._set_gate_status(self.gate_selected, self.GATE_AVAILABLE_FROM_BUFFER)
 
             elif self.loaded_status >= self.LOADED_STATUS_PARTIAL_HOMED_EXTRUDER:
                 # fast unload of bowden, then slow unload encoder
-                self._unload_bowden(length - self.unload_buffer, skip_sync_move=skip_sync_move)
+                self._unload_bowden(length, skip_sync_move=skip_sync_move)
                 self._unload_encoder(self.unload_buffer)
                 self._set_gate_status(self.gate_selected, self.GATE_AVAILABLE_FROM_BUFFER)
 
@@ -2323,7 +2344,7 @@ class Ercf:
     def _unload_extruder(self, disable_sync=False):
         current_action = self._set_action(self.ACTION_UNLOADING_EXTRUDER)
         try:
-            self._log_debug("Extracting filament from extruder")
+            self._log_always("Extracting filament from extruder")
             self.filament_direction = self.DIRECTION_UNLOAD
             self._set_above_min_temp()
             sync_allowed = self.sync_unload_extruder and not disable_sync
@@ -2380,15 +2401,17 @@ class Ercf:
                 step = self.encoder_move_step_size
                 max_length = self._get_home_position_to_nozzle() + step
                 speed = self.nozzle_unload_speed * 0.5 # First pull slower just in case we don't have tip
-                self._log_debug("Trying to exit the extruder, up to %.1fmm in %.1fmm steps" % (max_length, step))
+                self._log_always("Trying to exit the extruder, up to %.1fmm in %.1fmm steps" % (max_length, step))
                 stuck_in_extruder = False
                 for i in range(int(math.ceil(max_length / step))):
                     msg = "Step #%d:" % (i+1)
+                    self._log_always("Moving motors in sync, distance: %.1f" % -step)
                     delta = self._trace_filament_move(msg, -step, speed=speed, motor="synced")
+                    self._log_always("Motors moved, distance: %.1f" % delta)
                     speed = self.nozzle_unload_speed  # Can pull at full speed on subsequent steps
 
                     if (step - delta) < self.ENCODER_MIN:
-                        self._log_debug("No encoder movement despite both steppers are pulling after %d moves" % (i+1))
+                        self._log_always("No encoder movement despite both steppers are pulling after %d moves" % (i+1))
                         stuck_in_extruder = True
                         break
                 if stuck_in_extruder:
@@ -2396,14 +2419,14 @@ class Ercf:
                 else:
                     # Back up just a bit with only the extruder, if we don't see any movement.
                     # then the filament is out of the extruder
-                    self._log_debug("Extruder entrance reached after %d moves" % (i+1))
+                    self._log_always("Extruder entrance reached after %d moves" % (i+1))
                     out_of_extruder = self._test_filament_in_extruder_by_retracting()
 
             if not out_of_extruder:
                 self._set_loaded_status(self.LOADED_STATUS_PARTIAL_IN_EXTRUDER)
                 raise ErcfError("Filament seems to be stuck in the extruder")
 
-            self._log_debug("Filament should be out of extruder")
+            self._log_always("Filament should be out of extruder")
             self._set_loaded_status(self.LOADED_STATUS_PARTIAL_END_OF_BOWDEN)
 
         finally:
@@ -2430,11 +2453,13 @@ class Ercf:
             sync = not skip_sync_move and self.sync_unload_length > 0
             initial_move = 10. if not sync else self.sync_unload_length
             if sync:
-                self._log_debug("Moving the gear and extruder motors in sync for %.1fmm" % -initial_move)
+                self._log_always("Moving the gear and extruder motors in sync for %.1fmm" % -initial_move)
                 delta = self._trace_filament_move("Sync unload", -initial_move, speed=self.sync_unload_speed, motor="both")
+                self._log_always("Motor moved, delta %.1f" % delta)
             else:
-                self._log_debug("Moving the gear motor for %.1fmm" % -initial_move)
+                self._log_always("Moving the gear motor for %.1fmm" % -initial_move)
                 delta = self._trace_filament_move("Unload", -initial_move, speed=self.sync_unload_speed, motor="gear", track=True)
+                self._log_always("Motor moved, delta %.1f" % delta)
 
             if delta > max(initial_move * 0.5, 1): # 50% slippage
                 self._log_always("Error unloading filament - not enough detected at encoder. Suspect servo not properly down. Retrying...")
@@ -2456,7 +2481,10 @@ class Ercf:
         delta = 0
         for i in range(moves):
             msg = "Course unloading move #%d from bowden" % (i+1)
-            delta += self._trace_filament_move(msg, -length / moves, track=True)
+            self._log_always("Doing bowden move, distance: %.1f" % (-length / moves))
+            localDelta = self._trace_filament_move(msg, -length / moves, track=True)
+            delta += localDelta
+            self._log_always("Motors moved, distance: %.1f" % localDelta)
             if i < moves:
                 self._set_loaded_status(self.LOADED_STATUS_PARTIAL_IN_BOWDEN)
         if delta >= length * 0.8 and not self.calibrating: # 80% slippage detects filament still stuck in extruder
@@ -2474,12 +2502,16 @@ class Ercf:
         self._servo_down()
         for i in range(max_steps):
             msg = "Unloading step #%d from encoder" % (i+1)
+            self._log_always("Doing encoder move, distance: %.1f" % -self.encoder_move_step_size)
             delta = self._trace_filament_move(msg, -self.encoder_move_step_size)
+            self._log_always("Motor moved, delta: %.1f" % delta)
             # Large enough delta here means we are out of the encoder
             if delta >= self.encoder_move_step_size * 0.2: # 20 %
                 self._set_loaded_status(self.LOADED_STATUS_PARTIAL_BEFORE_ENCODER)
                 park = self.parking_distance - delta# will be between 8 and 20mm (for 23mm parking_distance, 15mm step)
+                self._log_always("Doing final parking move, distance: %.1f" % -park)
                 delta = self._trace_filament_move("Final parking", -park)
+                self._log_always("Motor moved, delta: %.1f" % delta)
                 # We don't expect any movement of the encoder unless it is free-spinning
                 if park - delta > 1.0: # We expect 0, but relax the test a little
                     self._log_info("Warning: Possible encoder malfunction (free-spinning) during final filament parking")
