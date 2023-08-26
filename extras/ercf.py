@@ -2256,33 +2256,25 @@ class Ercf:
 
             if self.loaded_status == self.LOADED_STATUS_PARTIAL_END_OF_BOWDEN and self._has_toolhead_sensor():
                 # This error case can occur when home to sensor failed and we may be stuck in extruder
-                self._log_always("Unloading from extruder")
                 self._unload_extruder()
-                self._log_always("Unloading from encoder, length: %d" % length)
                 self._unload_encoder(length) # Full slow unload
                 self._set_gate_status(self.gate_selected, self.GATE_AVAILABLE_FROM_BUFFER)
 
             elif self.loaded_status >= self.LOADED_STATUS_PARTIAL_HOMED_SENSOR:
                 # Exit extruder, fast unload of bowden, then slow unload encoder
-                self._log_always("Unloading from extruder")
                 self._unload_extruder()
-                self._log_always("Unloading bowden, length: %d" % length - self.unload_buffer)
                 self._unload_bowden(length - self.unload_buffer, skip_sync_move=skip_sync_move)
-                self._log_always("Unloading from encoder, length: %d" % self.unload_buffer)
                 self._unload_encoder(self.unload_buffer)
                 self._set_gate_status(self.gate_selected, self.GATE_AVAILABLE_FROM_BUFFER)
 
             elif self.loaded_status >= self.LOADED_STATUS_PARTIAL_HOMED_EXTRUDER:
                 # fast unload of bowden, then slow unload encoder
-                self._log_always("Unloading bowden, length: %d" % length - self.unload_buffer)
                 self._unload_bowden(length - self.unload_buffer, skip_sync_move=skip_sync_move)
-                self._log_always("Unloading from encoder, length: %d" % self.unload_buffer)
                 self._unload_encoder(self.unload_buffer)
                 self._set_gate_status(self.gate_selected, self.GATE_AVAILABLE_FROM_BUFFER)
 
             elif self.loaded_status >= self.LOADED_STATUS_PARTIAL_BEFORE_ENCODER:
                 # Have to do slow unload because we don't know exactly where we are
-                self._log_always("Unloading from encoder, length: %d" % length)
                 self._unload_encoder(length) # Full slow unload
 
             else:
