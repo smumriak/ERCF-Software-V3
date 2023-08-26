@@ -154,7 +154,7 @@ class Ercf:
                   'silver', 'skyblue', 'slateblue', 'slategray', 'slategrey', 'snow', 'springgreen', 'steelblue', 'tan', 'teal', 'thistle', 'tomato',
                   'turquoise', 'violet', 'wheat', 'white', 'whitesmoke', 'yellow', 'yellowgreen']
 
-    UPGRADE_REMINDER = "Did you upgrade? Run Happy Hare './install.sh' again to fix configuration files and/or read https://github.com/moggieuk/ERCF-Software-V3/blob/master/doc/UPGRADE.md"
+    UPGRADE_REMINDER = "Did you upgrade? Run Happy Hare './install.sh' again to fix configuration files and/or read https://github.com/smumriak/ERCF-Software-V3/blob/master/doc/UPGRADE.md"
 
     def __init__(self, config):
         self.config = config

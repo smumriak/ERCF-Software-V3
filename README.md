@@ -10,17 +10,17 @@ Klipper control software for ERCF v1.1
 </p>
 
 <p align="center">
-  <a aria-label="Downloads" href="https://github.com/moggieuk/ERCF-Software-V3/releases">
-    <img src="https://img.shields.io/github/release/moggieuk/ERCF-Software-V3?display_name=tag&style=flat-square">
+  <a aria-label="Downloads" href="https://github.com/smumriak/ERCF-Software-V3/releases">
+    <img src="https://img.shields.io/github/release/smumriak/ERCF-Software-V3?display_name=tag&style=flat-square">
   </a>
-  <a aria-label="Stars" href="https://github.com/moggieuk/ERCF-Software-V3/stargazers">
-    <img src="https://img.shields.io/github/stars/moggieuk/ERCF-Software-V3?style=flat-square">
+  <a aria-label="Stars" href="https://github.com/smumriak/ERCF-Software-V3/stargazers">
+    <img src="https://img.shields.io/github/stars/smumriak/ERCF-Software-V3?style=flat-square">
   </a>
-  <a aria-label="Forks" href="https://github.com/moggieuk/ERCF-Software-V3/network/members">
-    <img src="https://img.shields.io/github/forks/moggieuk/ERCF-Software-V3?style=flat-square">
+  <a aria-label="Forks" href="https://github.com/smumriak/ERCF-Software-V3/network/members">
+    <img src="https://img.shields.io/github/forks/smumriak/ERCF-Software-V3?style=flat-square">
   </a>
-  <a aria-label="License" href="https://github.com/moggieuk/ERCF-Software-V3/blob/master/LICENSE">
-    <img src="https://img.shields.io/github/license/moggieuk/ERCF-Software-V3?style=flat-square">
+  <a aria-label="License" href="https://github.com/smumriak/ERCF-Software-V3/blob/master/LICENSE">
+    <img src="https://img.shields.io/github/license/smumriak/ERCF-Software-V3?style=flat-square">
   </a>
 </p>
 
@@ -80,7 +80,7 @@ Now with customized [KlipperScreen for ERCF](#klipperscreen-happy-hare-edition) 
 The module can be installed into an existing Klipper installation with the install script. Once installed it will be added to Moonraker update-manager to easy updates like other Klipper plugins:
 
     cd ~
-    git clone https://github.com/moggieuk/ERCF-Software-V3.git
+    git clone https://github.com/smumriak/ERCF-Software-V3.git
     cd ERCF-Software-V3
 
     ./install.sh -i
