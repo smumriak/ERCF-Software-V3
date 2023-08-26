@@ -2672,7 +2672,7 @@ class Ercf:
         delta = abs(target_move - travel)
         self._log_trace("Selector moved %.1fmm of intended travel from: %.1fmm to: %.1fmm (delta: %.1fmm)"
                         % (travel, init_position, target, delta))
-        if delta <= 1.0 :
+        if delta <= 1.7 : # stupid magic bullshit constant
             # True up position
             self._log_trace("Truing selector %.1fmm to %.1fmm" % (delta, target))
             self.selector_stepper.do_set_position(init_position + travel)
