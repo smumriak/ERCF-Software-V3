@@ -1449,6 +1449,7 @@ class Ercf:
             self.calibrating = True
             self._servo_up()
             move_length = 10. + gate*self.filamentblock_width + (gate//3)*5 + (self.bypass_offset > 0)
+            move_length += 30 # add "one more gate"
             self._log_always("Measuring the selector position for gate %d" % gate)
             selector_steps = self.selector_stepper.steppers[0].get_step_dist()
             init_position = self.selector_stepper.get_position()[0]
@@ -2588,7 +2589,17 @@ class Ercf:
         self.gate_selected = self.TOOL_UNKNOWN
         self._servo_up()
         num_channels = len(self.selector_offsets)
+        # move away from home first to give homing some room
+        move_to_end_distance = 10
+        if self.sensorless_selector == 1:
+            try:
+                self.selector_stepper.do_set_position(0.)
+                self._selector_stepper_move_wait(move_to_end_distance, speed=60, homing_move=1)
+            except Exception as e:
+                pass
+
         selector_length = 10. + (num_channels-1)*self.filamentblock_width + ((num_channels-1)//3)*5. + (self.bypass_offset > 0)
+        selector_length += 30 # add "one more gate"
         self._log_debug("Moving up to %.1fmm to home a %d channel ERCF" % (selector_length, num_channels))
         self.toolhead.wait_moves()
         if self.sensorless_selector == 1:
