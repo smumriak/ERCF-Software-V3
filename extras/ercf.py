@@ -2852,8 +2852,7 @@ class Ercf:
         except ErcfError as ee:
             self._pause(str(ee))
 
-    cmd_ERCF_CHANGE_TOOL_help = "Perform a tool swap"
-    def cmd_ERCF_CHANGE_TOOL(self, gcmd):
+    def changeTool(self, gcmd, retryCount):
         if self._check_is_disabled(): return
         if self._check_is_paused(): return
         if self._check_in_bypass(): return
@@ -2872,9 +2871,16 @@ class Ercf:
             self._dump_statistics(quiet=quiet)
             self._enable_encoder_sensor(restore_encoder)
         except ErcfError as ee:
-            self._pause("%s.\nOccured when changing tool: %s" % (str(ee), self._last_toolchange))
+            if retryCount > 0:
+                self.changeTool(gcmd, retryCount - 1)
+            else: 
+                self._pause("%s.\nOccured when changing tool: %s" % (str(ee), self._last_toolchange))
         finally:
             self._next_tool = self.TOOL_UNKNOWN
+
+    cmd_ERCF_CHANGE_TOOL_help = "Perform a tool swap"
+    def cmd_ERCF_CHANGE_TOOL(self, gcmd):
+        self.changeTool(gcmd, 1)
 
     cmd_ERCF_LOAD_help = "Loads filament on current tool/gate or optionally loads just the extruder for bypass or recovery usage"
     def cmd_ERCF_LOAD(self, gcmd, bypass=False):
