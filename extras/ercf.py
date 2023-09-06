@@ -2471,7 +2471,7 @@ class Ercf:
     def _unload_encoder(self, max_length):
         self._log_debug("Slow unload of the encoder")
         self.filament_direction = self.DIRECTION_UNLOAD
-        max_steps = int(max_length / self.encoder_move_step_size) + 5
+        max_steps = int(max_length / self.encoder_move_step_size) + 15
         self._servo_down()
         for i in range(max_steps):
             msg = "Unloading step #%d from encoder" % (i+1)
