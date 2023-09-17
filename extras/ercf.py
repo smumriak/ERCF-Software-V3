@@ -2855,7 +2855,7 @@ class Ercf:
         except ErcfError as ee:
             self._pause(str(ee))
 
-    def changeTool(self, gcmd, retryCount = 1):
+    def changeTool(self, gcmd, retryCount = 4):
         if self._check_is_disabled(): return
         if self._check_is_paused(): return
         if self._check_in_bypass(): return
