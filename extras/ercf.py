@@ -2404,6 +2404,7 @@ class Ercf:
                 self._set_loaded_status(self.LOADED_STATUS_PARTIAL_IN_EXTRUDER)
                 if retryCount > 0:
                     self._unload_extruder(retryCount= retryCount - 1, disable_sync)
+                    return
                 else:
                     raise ErcfError("Filament seems to be stuck in the extruder")
 
@@ -2876,6 +2877,7 @@ class Ercf:
         except ErcfError as ee:
             if retryCount > 0:
                 self.changeTool(gcmd, retryCount= retryCount - 1)
+                return
             else: 
                 self._pause("%s.\nOccured when changing tool: %s" % (str(ee), self._last_toolchange))
         finally:
