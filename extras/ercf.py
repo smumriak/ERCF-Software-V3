@@ -2321,7 +2321,7 @@ class Ercf:
     # Extract filament past extruder gear (end of bowden)
     # Assume that tip has already been formed and we are parked somewhere in the encoder either by
     # slicer or my stand alone tip creation
-    def _unload_extruder(self, disable_sync=False):
+    def _unload_extruder(self, retryCount = 5, disable_sync=False):
         current_action = self._set_action(self.ACTION_UNLOADING_EXTRUDER)
         try:
             self._log_debug("Extracting filament from extruder")
@@ -2402,7 +2402,10 @@ class Ercf:
 
             if not out_of_extruder:
                 self._set_loaded_status(self.LOADED_STATUS_PARTIAL_IN_EXTRUDER)
-                raise ErcfError("Filament seems to be stuck in the extruder")
+                if retryCount > 0:
+                    self._unload_extruder(retryCount= retryCount - 1, disable_sync)
+                else:
+                    raise ErcfError("Filament seems to be stuck in the extruder")
 
             self._log_debug("Filament should be out of extruder")
             self._set_loaded_status(self.LOADED_STATUS_PARTIAL_END_OF_BOWDEN)
@@ -2852,7 +2855,7 @@ class Ercf:
         except ErcfError as ee:
             self._pause(str(ee))
 
-    def changeTool(self, gcmd, retryCount):
+    def changeTool(self, gcmd, retryCount = 1):
         if self._check_is_disabled(): return
         if self._check_is_paused(): return
         if self._check_in_bypass(): return
@@ -2872,7 +2875,7 @@ class Ercf:
             self._enable_encoder_sensor(restore_encoder)
         except ErcfError as ee:
             if retryCount > 0:
-                self.changeTool(gcmd, retryCount - 1)
+                self.changeTool(gcmd, retryCount= retryCount - 1)
             else: 
                 self._pause("%s.\nOccured when changing tool: %s" % (str(ee), self._last_toolchange))
         finally:
@@ -2880,7 +2883,7 @@ class Ercf:
 
     cmd_ERCF_CHANGE_TOOL_help = "Perform a tool swap"
     def cmd_ERCF_CHANGE_TOOL(self, gcmd):
-        self.changeTool(gcmd, 1)
+        self.changeTool(gcmd)
 
     cmd_ERCF_LOAD_help = "Loads filament on current tool/gate or optionally loads just the extruder for bypass or recovery usage"
     def cmd_ERCF_LOAD(self, gcmd, bypass=False):
