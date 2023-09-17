@@ -2403,7 +2403,7 @@ class Ercf:
             if not out_of_extruder:
                 self._set_loaded_status(self.LOADED_STATUS_PARTIAL_IN_EXTRUDER)
                 if retryCount > 0:
-                    self._unload_extruder(retryCount= retryCount - 1, disable_sync)
+                    self._unload_extruder(retryCount= retryCount - 1, disable_sync= disable_sync)
                     return
                 else:
                     raise ErcfError("Filament seems to be stuck in the extruder")
