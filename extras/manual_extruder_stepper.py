@@ -111,12 +111,15 @@ class ManualExtruderStepper(kinematics_extruder.ExtruderStepper, manual_stepper.
             raise self.printer.command_error("Cannot manual move: stepper synced to motion queue")
         return manual_stepper.ManualStepper.cmd_MANUAL_STEPPER(self, gcmd)
 
+    def resetSynchronization(self):
+        self._set_manual_kinematics()
+        self.motion_queue = None
+
     def sync_to_extruder(self, extruder_name):
         toolhead = self.printer.lookup_object('toolhead')
         toolhead.flush_step_generation()
         if not extruder_name:
-            self._set_manual_kinematics()
-            self.motion_queue = None
+            self.resetSynchronization()
             return
         extruder = self.printer.lookup_object(extruder_name, None)
         if extruder is None or not isinstance(extruder, kinematics_extruder.PrinterExtruder):
