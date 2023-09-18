@@ -2856,6 +2856,29 @@ class Ercf:
         except ErcfError as ee:
             self._pause(str(ee))
 
+    def changeToolImplementation(self, gcmd, retryCount, quiet, tool, standalone, skip_tip):
+        try:
+            restore_encoder = self._disable_encoder_sensor(update_clog_detection_length=True) # Don't want runout accidently triggering during tool change
+            self._last_tool = self.tool_selected
+            self._next_tool = tool
+            self._change_tool(tool, skip_tip)
+            self._dump_statistics(quiet=quiet)
+        except ErcfError as ee:
+            if retryCount > 0:
+                self.changeToolImplementation(
+                    gcmd= gcmd,
+                    retryCount= retryCount - 1,
+                    quiet= quiet,
+                    tool= tool,
+                    standalone= standalone,
+                    skip_tip= skip_tip,
+                )
+                return
+            else: 
+                self._pause("%s.\nOccured when changing tool: %s" % (str(ee), self._last_toolchange))
+        finally:
+            self._next_tool = self.TOOL_UNKNOWN
+
     def changeTool(self, gcmd, retryCount = 4):
         if self._check_is_disabled(): return
         if self._check_is_paused(): return
@@ -2864,24 +2887,16 @@ class Ercf:
         tool = gcmd.get_int('TOOL', minval=0, maxval=len(self.selector_offsets)-1)
         standalone = bool(gcmd.get_int('STANDALONE', 0, minval=0, maxval=1))
         skip_tip = self._is_in_print() and not standalone
-        if self.loaded_status == self.LOADED_STATUS_UNKNOWN and self.is_homed: # Will be done later if not homed
-            self._log_error("Unknown filament position, recovering state...")
-            self._recover_loaded_state()
-        try:
-            restore_encoder = self._disable_encoder_sensor(update_clog_detection_length=True) # Don't want runout accidently triggering during tool change
-            self._last_tool = self.tool_selected
-            self._next_tool = tool
-            self._change_tool(tool, skip_tip)
-            self._dump_statistics(quiet=quiet)
-            self._enable_encoder_sensor(restore_encoder)
-        except ErcfError as ee:
-            if retryCount > 0:
-                self.changeTool(gcmd, retryCount= retryCount - 1)
-                return
-            else: 
-                self._pause("%s.\nOccured when changing tool: %s" % (str(ee), self._last_toolchange))
-        finally:
-            self._next_tool = self.TOOL_UNKNOWN
+        restore_encoder = self._disable_encoder_sensor(update_clog_detection_length=True) # Don't want runout accidently triggering during tool change
+        self.changeToolImplementation(
+            gcmd= gcmd,
+            retryCount= retryCount,
+            quiet= quiet,
+            tool= tool,
+            standalone= standalone,
+            skip_tip= skip_tip,
+        )
+        self._enable_encoder_sensor(restore_encoder)
 
     cmd_ERCF_CHANGE_TOOL_help = "Perform a tool swap"
     def cmd_ERCF_CHANGE_TOOL(self, gcmd):
@@ -2911,8 +2926,6 @@ class Ercf:
                 self._log_always("Filament already loaded")
         except ErcfError as ee:
             self._pause(str(ee))
-            if self.tool_selected == self.TOOL_BYPASS:
-                self._set_loaded_status(self.LOADED_STATUS_UNKNOWN)
         finally:
             self._enable_encoder_sensor(restore_encoder)
 
