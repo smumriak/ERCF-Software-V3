@@ -2232,11 +2232,6 @@ class Ercf:
             self.encoder_sensor.reset_counts()    # Encoder 0000
             self._track_unload_start()
 
-            if check_state or self.loaded_status == self.LOADED_STATUS_UNKNOWN:
-                # Let's determine where filament is and reset state before continuing
-                self._log_error("Unsure of filament position, recovering state...")
-                self._recover_loaded_state()
-
             if self.loaded_status == self.LOADED_STATUS_UNLOADED:
                 self._log_debug("Filament already ejected")
                 self._servo_up()
