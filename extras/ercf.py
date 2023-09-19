@@ -2338,8 +2338,9 @@ class Ercf:
             self._log_always("Hard Unload: Filament was found in extruder")
             # 1.1. remove from extruder
             # load back what was unloaded
+            loadBackDistance = min(extruderTestDistance, -1.0 * distanceMoved + self.tubePlay)
             self.moveMotor(
-                distance= -1.0 * (distanceMoved + self.tubePlay),
+                distance= loadBackDistance,
                 speed= self.nozzle_unload_speed,
                 motor= "extruder"
             )
