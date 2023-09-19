@@ -2317,172 +2317,172 @@ class Ercf:
     def hardUnload(self):
         self.toolhead.wait_moves()
         # 1. Check if filament in extruder.
-            extruderTestDistance = 5.0
-            distanceMoved = self.moveMotor(
-                distance= -extruderTestDistance,
-                speed= self.nozzle_unload_speed,
-                motor="extruder"
-            )
-            
-            if distanceMoved != 0.0:
+        extruderTestDistance = 5.0
+        distanceMoved = self.moveMotor(
+            distance= -extruderTestDistance,
+            speed= self.nozzle_unload_speed,
+            motor="extruder"
+        )
+        
+        if distanceMoved != 0.0:
             # 1.1. remove from extruder
-                # load back what was unloaded
+            # load back what was unloaded
+            self.moveMotor(
+                distance= -1.0 * distanceMoved, 
+                speed= self.nozzle_unload_speed,
+                motor= "extruder"
+            )
+            # set status to known value
+            self._set_loaded_status(self.LOADED_STATUS_PARTIAL_IN_EXTRUDER)
+            # form the tip
+            try: 
+                self._form_tip_standalone()
+            except:
+                self._log_always("Tip forming failed, but not to worry, we will extrude without forming the tip")
+                self.toolhead.wait_moves()
                 self.moveMotor(
-                    distance= -1.0 * distanceMoved, 
-                    speed= self.nozzle_unload_speed,
+                    distance= -35.0, 
+                    speed= 180.0,
                     motor= "extruder"
                 )
-                # set status to known value
-                self._set_loaded_status(self.LOADED_STATUS_PARTIAL_IN_EXTRUDER)
-                # form the tip
-                try: 
-                    self._form_tip_standalone()
-                except:
-                    self._log_always("Tip forming failed, but not to worry, we will extrude without forming the tip")
-                    self.toolhead.wait_moves()
-                    self.moveMotor(
-                        distance= -35.0, 
-                        speed= 180.0,
-                        motor= "extruder"
-                    )
-                    self.toolhead.dwell(5)
-                finally: 
-                    self.toolhead.wait_moves()
-                    
-                # this one probably will need to be rewritten too because I don't trust it either
-                try:
-                    self._unload_extruder()
-                except:
-                    self._log_always("Unloading from extruder failed, but not to worry, we do this again and again")
-                    # three attempts. if after three attempts it didn't work - we need manual intervention for real
-                    self._servo_down()
+                self.toolhead.dwell(5)
+            finally: 
+                self.toolhead.wait_moves()
+                
+            # this one probably will need to be rewritten too because I don't trust it either
+            try:
+                self._unload_extruder()
+            except:
+                self._log_always("Unloading from extruder failed, but not to worry, we do this again and again")
+                # three attempts. if after three attempts it didn't work - we need manual intervention for real
+                self._servo_down()
 
-                    for i in range(3):
-                        distanceMoved = self.moveMotor(
-                            distance= -120, 
-                            speed= self.nozzle_unload_speed,
-                            motor= "synced"
-                        )
-
-                        if distanceMoved == 0.0:
-                            break
-                    
-                    self.toolhead.wait_moves()
-                    self.servo_up()
-
-                    if distanceMoved != 0.0:
-                        raise ErcfError("Oopsiedoodle, I was unable to remove filament from extruder after three attempts. This is PROBABLY A LEGIT ISSUE")
-
-                self._set_loaded_status(self.LOADED_STATUS_PARTIAL_HOMED_EXTRUDER)
-            
-            # 1.2. remove filament for the whole length of the tube, aka "fast" remove
-                tubeLength = self._get_calibration_ref()
-                # this one probably will need to be rewritten too because I don't trust it either
-                try:
-                    self._unload_bowden(
-                        length= tubeLength - self.unload_buffer,
-                        skip_sync_move= False
-                    )
-                except:
-                    self._log_always("Unloading filament from the tube failed, but not to worry, we do this again and again")
-
-                    babyStep = 5.0
-                    iterationsCount = int(tubeLength / babyStep) + 15
-
-                    self._servo_down()
-
-                    for i in range(iterationsCount):
-                        distanceMoved = self.moveMotor(
-                            distance= -babyStep, 
-                            speed= 60.0,
-                            motor= "gear"
-                        )
-
-                        if distanceMoved == 0.0:
-                            break
-
-                    self._servo_up()
-
-                    self._log_always("Blind unload from the tube should be done. Lets test if loading back reaches encoder")
-
+                for i in range(3):
                     distanceMoved = self.moveMotor(
-                        distance= 30.0, 
+                        distance= -120, 
+                        speed= self.nozzle_unload_speed,
+                        motor= "synced"
+                    )
+
+                    if distanceMoved == 0.0:
+                        break
+                
+                self.toolhead.wait_moves()
+                self.servo_up()
+
+                if distanceMoved != 0.0:
+                    raise ErcfError("Oopsiedoodle, I was unable to remove filament from extruder after three attempts. This is PROBABLY A LEGIT ISSUE")
+
+            self._set_loaded_status(self.LOADED_STATUS_PARTIAL_HOMED_EXTRUDER)
+        
+            # 1.2. remove filament for the whole length of the tube, aka "fast" remove
+            tubeLength = self._get_calibration_ref()
+            # this one probably will need to be rewritten too because I don't trust it either
+            try:
+                self._unload_bowden(
+                    length= tubeLength - self.unload_buffer,
+                    skip_sync_move= False
+                )
+            except:
+                self._log_always("Unloading filament from the tube failed, but not to worry, we do this again and again")
+
+                babyStep = 5.0
+                iterationsCount = int(tubeLength / babyStep) + 15
+
+                self._servo_down()
+
+                for i in range(iterationsCount):
+                    distanceMoved = self.moveMotor(
+                        distance= -babyStep, 
                         speed= 60.0,
                         motor= "gear"
                     )
 
                     if distanceMoved == 0.0:
-                        self._log_always("No filmanet in the cart! This is baaad")
-                        raise ErcfError("Oopsiedoodle, I was unable to load a little bit of filament to encoder. This is PROBABLY A LEGIT ISSUE")
+                        break
+
+                self._servo_up()
+
+                self._log_always("Blind unload from the tube should be done. Lets test if loading back reaches encoder")
+
+                distanceMoved = self.moveMotor(
+                    distance= 30.0, 
+                    speed= 60.0,
+                    motor= "gear"
+                )
+
+                if distanceMoved == 0.0:
+                    self._log_always("No filmanet in the cart! This is baaad")
+                    raise ErcfError("Oopsiedoodle, I was unable to load a little bit of filament to encoder. This is PROBABLY A LEGIT ISSUE")
 
             # 1.3. remove from encoder
             # 1.4. park
-                # this one looks like a good piece, tho extremely unreadable
-                try:
-                    self._unload_encoder(self.unload_buffer)
-                except:
-                    self._log_always("Unloading from encoder failed, but not to worry, this will be attempted again")
+            # this one looks like a good piece, tho extremely unreadable
+            try:
+                self._unload_encoder(self.unload_buffer)
+            except:
+                self._log_always("Unloading from encoder failed, but not to worry, this will be attempted again")
 
 
         # 2. else Check if filament in encoder
-            else:
+        else:
             # 2.1. in baby steps extract the full parking distance checking on each step the distance traveled by encoder.
             # 2.2. if encoder shows less movement than expected - proceed to parking
             # 2.3. if encoder shows exact movement continue
             # this one looks like a good piece, tho extremely unreadable
-                try:
-                    self._unload_encoder(self.unload_buffer)
-                except:
-                    self._log_always("Unloading from encoder failed, but not to worry, this will be attempted again")
+            try:
+                self._unload_encoder(self.unload_buffer)
+            except:
+                self._log_always("Unloading from encoder failed, but not to worry, this will be attempted again")
 
         # 3. test if filament is in selector via homing moves. if selector homing failed we still have filament loaded
-            success = False
-            for i in range(8):
-                self._servo_up()
-                self.selector_stepper.do_set_position(0.0)
-                self.selector_stepper.do_homing_move(
-                    movepos= 10.0,
-                    speed= 60.0,
-                    accel= self.selector_stepper.accel,
-                    triggered= True,
-                    check_trigger= True
-                )
-                self.toolhead.dwell(0.2)
+        success = False
+        for i in range(8):
+            self._servo_up()
+            self.selector_stepper.do_set_position(0.0)
+            self.selector_stepper.do_homing_move(
+                movepos= 10.0,
+                speed= 60.0,
+                accel= self.selector_stepper.accel,
+                triggered= True,
+                check_trigger= True
+            )
+            self.toolhead.dwell(0.2)
 
-                distanceMoved = abs(self.selector_stepper.get_position()[0])
-                
-                self.selector_stepper.do_set_position(0.0)
-                self.selector_stepper.do_homing_move(
-                    movepos= -10.0,
-                    speed= 60.0,
-                    accel= self.selector_stepper.accel,
-                    triggered= True,
-                    check_trigger= True
-                )
-                self.toolhead.dwell(0.2)
-
-                distanceMoved += abs(self.selector_stepper.get_position()[0])
-
-                if distanceMoved < 10.0:
-                    # filament still in encoder
-                    self._servo_down()
-                    self.moveMotor(
-                        distance= 5.0, 
-                        speed= 60.0,
-                        motor= "gear"
-                    )
-                    self.toolhead.wait_moves()
-                    self.servo_up()
-                else:
-                    success = True
-                    break
+            distanceMoved = abs(self.selector_stepper.get_position()[0])
             
-            if success == False:
-                self._set_loaded_status(self.LOADED_STATUS_UNKNOWN)
-                self._log_always("Proper recovery measures failed, human must check mechanical issue")
-                raise ErcfError("Oopsiedoodle, I was unable to percform the encoder pull recover with homing moves. This is PROBABLY A LEGIT ISSUE")
+            self.selector_stepper.do_set_position(0.0)
+            self.selector_stepper.do_homing_move(
+                movepos= -10.0,
+                speed= 60.0,
+                accel= self.selector_stepper.accel,
+                triggered= True,
+                check_trigger= True
+            )
+            self.toolhead.dwell(0.2)
+
+            distanceMoved += abs(self.selector_stepper.get_position()[0])
+
+            if distanceMoved < 10.0:
+                # filament still in encoder
+                self._servo_down()
+                self.moveMotor(
+                    distance= 5.0, 
+                    speed= 60.0,
+                    motor= "gear"
+                )
+                self.toolhead.wait_moves()
+                self.servo_up()
             else:
-                self._home_selector()
+                success = True
+                break
+        
+        if success == False:
+            self._set_loaded_status(self.LOADED_STATUS_UNKNOWN)
+            self._log_always("Proper recovery measures failed, human must check mechanical issue")
+            raise ErcfError("Oopsiedoodle, I was unable to percform the encoder pull recover with homing moves. This is PROBABLY A LEGIT ISSUE")
+        else:
+            self._home_selector()
 
     # This is a recovery routine to determine the most conservative location of the filament for unload purposes
     def _recover_loaded_state(self):
