@@ -3131,7 +3131,7 @@ class Ercf:
             if self.tool_selected != None and self.tool_selected != self.TOOL_UNKNOWN and self.tool_selected != self.TOOL_BYPASS and not extruder_only:
                 self._log_always("Unloading tool for some reason")
                 self._unload_tool()
-            elif self.loaded_status != LOADED_STATUS_UNKNOWN and (self.loaded_status != self.LOADED_STATUS_UNLOADED or extruder_only):
+            elif self.loaded_status != self.LOADED_STATUS_UNKNOWN and (self.loaded_status != self.LOADED_STATUS_UNLOADED or extruder_only):
                 if self._form_tip_standalone(disable_sync=True):
                     self._unload_extruder(disable_sync=True)
                 if self.tool_selected == self.TOOL_BYPASS:
