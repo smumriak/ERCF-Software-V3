@@ -2316,6 +2316,8 @@ class Ercf:
 
     def hardUnload(self):
         self.toolhead.wait_moves()
+        self._set_above_min_temp()
+        
         # 1. Check if filament in extruder.
         extruderTestDistance = 5.0
         distanceMoved = self.moveMotor(
