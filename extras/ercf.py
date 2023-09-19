@@ -181,6 +181,7 @@ class Ercf:
         self.gear_homing_accel = config.getfloat('gear_homing_accel', 1000)
         self.gear_sync_accel = config.getfloat('gear_sync_accel', 1000)
         self.gear_buzz_accel = config.getfloat('gear_buzz_accel', 2000)
+        self.tubePlay = config.getfloat('tube_play', 5.2)
         self.servo_up_angle = config.getfloat('servo_up_angle')
         self.servo_down_angle = config.getfloat('servo_down_angle')
         self.servo_duration = config.getfloat('servo_duration', 0.2, minval=0.1)
@@ -2324,14 +2325,12 @@ class Ercf:
         self._set_above_min_temp()
         
         # 1. Check if filament in extruder.
-        extruderTestDistance = 5.0
+        extruderTestDistance = 5.0 + self.tubePlay
         distanceMoved = self.moveMotor(
             distance= -extruderTestDistance,
             speed= self.nozzle_unload_speed,
             motor= "extruder"
         )
-
-        self.toolhead.wait_moves()
 
         self._log_always(f"Hard Unload: Extruder moved filament for {distanceMoved}")
         
@@ -2340,7 +2339,7 @@ class Ercf:
             # 1.1. remove from extruder
             # load back what was unloaded
             self.moveMotor(
-                distance= -1.0 * distanceMoved, 
+                distance= -1.0 * (distanceMoved + self.tubePlay),
                 speed= self.nozzle_unload_speed,
                 motor= "extruder"
             )
