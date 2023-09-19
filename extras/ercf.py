@@ -2296,13 +2296,14 @@ class Ercf:
     def moveMotor(self, distance, speed=None, accel=None, motor="gear"):
         self.encoder_sensor.set_counts(0.0)
         self._sync_gear_to_extruder(motor == "synced")
+        speed = speed or self.gear_stepper.velocity
+        accel = accel or self.gear_sync_accel
         
         if motor == "gear":
             self._log_always(f"Hard Unload: Moving gear for {distance}")
             self._gear_stepper_move_wait(distance, speed=speed, accel=accel)
         else:   # Extruder only or Gear synced with extruder
             self._log_always(f"Hard Unload: Moving toolhead (or both) for {distance}")
-            speed = speed or self.gear_stepper.velocity
             pos = self.toolhead.get_position()
             pos[3] += distance
             self.toolhead.manual_move(pos, speed)
@@ -2312,7 +2313,7 @@ class Ercf:
         measuredDistance = self.encoder_sensor.get_distance()
 
         if distance < 0.0:
-            measuredDistance = -1.0 * measuredDistance
+            measuredDistance *= -1.0
 
         return measuredDistance
 
