@@ -3127,6 +3127,7 @@ class Ercf:
         restore_encoder = self._disable_encoder_sensor() # Don't want runout accidently triggering during filament unload
         try:
             if self.tool_selected != self.TOOL_BYPASS and not extruder_only:
+                self._log_always("Unloading tool for some reason")
                 self._unload_tool()
             elif self.loaded_status != self.LOADED_STATUS_UNLOADED or extruder_only:
                 if self._form_tip_standalone(disable_sync=True):
