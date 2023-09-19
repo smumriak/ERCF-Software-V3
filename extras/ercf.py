@@ -3126,7 +3126,7 @@ class Ercf:
         extruder_only = bool(gcmd.get_int('EXTRUDER_ONLY', 0, minval=0, maxval=1) or bypass)
         restore_encoder = self._disable_encoder_sensor() # Don't want runout accidently triggering during filament unload
         try:
-            if self.tool_selected != self.TOOL_BYPASS and not extruder_only:
+            if self.tool_selected != None and self.tool_selected != self.TOOL_UNKNOWN and self.tool_selected != self.TOOL_BYPASS and not extruder_only:
                 self._log_always("Unloading tool for some reason")
                 self._unload_tool()
             elif self.loaded_status != self.LOADED_STATUS_UNLOADED or extruder_only:
@@ -3138,7 +3138,8 @@ class Ercf:
                 else:
                     self._set_loaded_status(self.LOADED_STATUS_PARTIAL_HOMED_EXTRUDER)
             else:
-                self._log_always("Filament not loaded")
+                self._log_always("Performing hard unload")
+                self.hardUnload()
         except ErcfError as ee:
             self._pause(str(ee))
         finally:
