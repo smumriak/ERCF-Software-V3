@@ -2305,7 +2305,9 @@ class Ercf:
         else:   # Extruder only or Gear synced with extruder
             self._log_always(f"Hard Unload: Moving toolhead (or both) for {distance}")
             pos = self.toolhead.get_position()
+            self._log_always(f"Hard Unload: Position {pos[3]}")
             pos[3] += distance
+            self._log_always(f"Hard Unload: Position {pos[3]}, speed {speed}")
             self.toolhead.manual_move(pos, speed)
             self.toolhead.wait_moves()
             self.toolhead.set_position(pos) # Force subsequent incremental move
