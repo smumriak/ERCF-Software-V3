@@ -2309,7 +2309,7 @@ class Ercf:
 
         measuredDistance = self.encoder_sensor.get_distance()
 
-        if distandce < 0.0:
+        if distance < 0.0:
             measuredDistance = -1.0 * measuredDistance
 
         return measuredDistance
