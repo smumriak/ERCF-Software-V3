@@ -2474,6 +2474,8 @@ class Ercf:
             self.toolhead.dwell(0.2)
 
             distanceMoved = abs(self.selector_stepper.get_position()[0])
+
+            self._log_always("Hard Unload: selector moved back {distanceMoved}")
             
             self.selector_stepper.do_set_position(0.0)
             self.selector_stepper.do_homing_move(
@@ -2486,6 +2488,8 @@ class Ercf:
             self.toolhead.dwell(0.2)
 
             distanceMoved += abs(self.selector_stepper.get_position()[0])
+
+            self._log_always("Hard Unload: selector moved total {distanceMoved}")
 
             if distanceMoved < 10.0:
                 # filament still in encoder
