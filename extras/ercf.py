@@ -2325,6 +2325,8 @@ class Ercf:
             speed= self.nozzle_unload_speed,
             motor="extruder"
         )
+
+        self._log_always(f"Hard Unload: Extruder moved filament for {distanceMoved}")
         
         if distanceMoved != 0.0:
             self._log_always("Hard Unload: Filament was found in extruder")
