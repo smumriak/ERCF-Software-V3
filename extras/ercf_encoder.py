@@ -274,14 +274,17 @@ class ErcfEncoder:
     def get_counts(self):
         return self._counts
 
+    def set_counts(self, counts):
+        self._counts = counts
+
+    def reset_counts(self):
+        self._counts = 0.
+
     def get_distance(self):
         return (self._counts / 2.) * self._encoder_steps
 
     def set_distance(self, new_distance):
         self._counts = int((new_distance / self._encoder_steps) * 2.)
-
-    def reset_counts(self):
-        self._counts = 0.
 
     def get_status(self, eventtime):
         return {
