@@ -2233,7 +2233,7 @@ class Ercf:
             self._track_unload_start()
 
             if self.loaded_status == self.LOADED_STATUS_UNLOADED:
-                self._log_always("Load status is unloaded, but performing hard unload to be sure" % self.loaded_status)
+                self._log_always("Load status is unloaded, but performing hard unload to be sure")
                 self.hardUnload()
                 return
 
