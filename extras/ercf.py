@@ -2325,6 +2325,7 @@ class Ercf:
         )
         
         if distanceMoved != 0.0:
+            self._log_always("Hard Unload: Filament was found in extruder")
             # 1.1. remove from extruder
             # load back what was unloaded
             self.moveMotor(
@@ -2338,7 +2339,7 @@ class Ercf:
             try: 
                 self._form_tip_standalone()
             except:
-                self._log_always("Tip forming failed, but not to worry, we will extrude without forming the tip")
+                self._log_always("Hard Unload: Tip forming failed, but not to worry, we will extrude without forming the tip")
                 self.toolhead.wait_moves()
                 self.moveMotor(
                     distance= -35.0, 
@@ -2353,7 +2354,7 @@ class Ercf:
             try:
                 self._unload_extruder()
             except:
-                self._log_always("Unloading from extruder failed, but not to worry, we do this again and again")
+                self._log_always("Hard Unload: Unloading from extruder failed, but not to worry, we do this again and again")
                 # three attempts. if after three attempts it didn't work - we need manual intervention for real
                 self._servo_down()
 
@@ -2371,7 +2372,7 @@ class Ercf:
                 self.servo_up()
 
                 if distanceMoved != 0.0:
-                    raise ErcfError("Oopsiedoodle, I was unable to remove filament from extruder after three attempts. This is PROBABLY A LEGIT ISSUE")
+                    raise ErcfError("Hard Unload: Oopsiedoodle, I was unable to remove filament from extruder after three attempts. This is PROBABLY A LEGIT ISSUE")
 
             self._set_loaded_status(self.LOADED_STATUS_PARTIAL_HOMED_EXTRUDER)
         
@@ -2384,7 +2385,7 @@ class Ercf:
                     skip_sync_move= False
                 )
             except:
-                self._log_always("Unloading filament from the tube failed, but not to worry, we do this again and again")
+                self._log_always("Hard Unload: Unloading filament from the tube failed, but not to worry, we do this again and again")
 
                 babyStep = 5.0
                 iterationsCount = int(tubeLength / babyStep) + 15
@@ -2403,7 +2404,7 @@ class Ercf:
 
                 self._servo_up()
 
-                self._log_always("Blind unload from the tube should be done. Lets test if loading back reaches encoder")
+                self._log_always("Hard Unload: Blind unload from the tube should be done. Lets test if loading back reaches encoder")
 
                 distanceMoved = self.moveMotor(
                     distance= 30.0, 
@@ -2412,8 +2413,8 @@ class Ercf:
                 )
 
                 if distanceMoved == 0.0:
-                    self._log_always("No filmanet in the cart! This is baaad")
-                    raise ErcfError("Oopsiedoodle, I was unable to load a little bit of filament to encoder. This is PROBABLY A LEGIT ISSUE")
+                    self._log_always("Hard Unload: No filmanet in the cart! This is baaad")
+                    raise ErcfError("Hard Unload: Oopsiedoodle, I was unable to load a little bit of filament to encoder. This is PROBABLY A LEGIT ISSUE")
 
             # 1.3. remove from encoder
             # 1.4. park
@@ -2421,7 +2422,7 @@ class Ercf:
             try:
                 self._unload_encoder(self.unload_buffer)
             except:
-                self._log_always("Unloading from encoder failed, but not to worry, this will be attempted again")
+                self._log_always("Hard Unload: Unloading from encoder failed, but not to worry, this will be attempted again")
 
 
         # 2. else Check if filament in encoder
@@ -2433,7 +2434,7 @@ class Ercf:
             try:
                 self._unload_encoder(self.unload_buffer)
             except:
-                self._log_always("Unloading from encoder failed, but not to worry, this will be attempted again")
+                self._log_always("Hard Unload: Unloading from encoder failed, but not to worry, this will be attempted again")
 
         # 3. test if filament is in selector via homing moves. if selector homing failed we still have filament loaded
         success = False
@@ -2479,9 +2480,10 @@ class Ercf:
         
         if success == False:
             self._set_loaded_status(self.LOADED_STATUS_UNKNOWN)
-            self._log_always("Proper recovery measures failed, human must check mechanical issue")
-            raise ErcfError("Oopsiedoodle, I was unable to percform the encoder pull recover with homing moves. This is PROBABLY A LEGIT ISSUE")
+            self._log_always("Hard Unload: Proper recovery measures failed, human must check mechanical issue")
+            raise ErcfError("Hard Unload: Oopsiedoodle, I was unable to percform the encoder pull recover with homing moves. This is PROBABLY A LEGIT ISSUE")
         else:
+            self._log_always("Hard Unload: Successfully performed hard unload, homing")
             self._home_selector()
 
     # This is a recovery routine to determine the most conservative location of the filament for unload purposes
