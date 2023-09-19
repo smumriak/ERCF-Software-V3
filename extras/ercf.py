@@ -2233,8 +2233,8 @@ class Ercf:
             self._track_unload_start()
 
             if self.loaded_status == self.LOADED_STATUS_UNLOADED:
-                self._log_debug("Filament already ejected")
-                self._servo_up()
+                self._log_always("Load status is unloaded, but performing hard unload to be sure" % self.loaded_status)
+                self.hardUnload()
                 return
 
             self._log_info("Unloading filament...")
@@ -2484,6 +2484,7 @@ class Ercf:
             raise ErcfError("Hard Unload: Oopsiedoodle, I was unable to percform the encoder pull recover with homing moves. This is PROBABLY A LEGIT ISSUE")
         else:
             self._log_always("Hard Unload: Successfully performed hard unload, homing")
+            self._set_loaded_status(self.LOADED_STATUS_UNLOADED)
             self._home_selector()
 
     # This is a recovery routine to determine the most conservative location of the filament for unload purposes
