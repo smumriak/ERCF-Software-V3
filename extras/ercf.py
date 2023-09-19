@@ -2321,6 +2321,15 @@ class Ercf:
         return measuredDistance
 
     def hardUnload(self):
+        try:
+            self.gcode.run_script_from_command("ERCF_CALLBACK_DISABLE_FILAMENT_SENSOR")
+            self.hardUnloadImplementation()
+        except:
+            raise
+        finally:
+            self.gcode.run_script_from_command("ERCF_CALLBACK_ENABLE_FILAMENT_SENSOR")
+
+    def hardUnloadImplementation(self):
         self.toolhead.wait_moves()
         self._set_above_min_temp()
         
