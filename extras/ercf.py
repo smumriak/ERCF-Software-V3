@@ -2280,7 +2280,7 @@ class Ercf:
 
             movement = self._servo_up()
             if movement > self.ENCODER_MIN:
-                self._log_always("Unexpected state %d in _unload_sequence()" % self.loaded_status)
+                self._log_always("That weird movement check failed obviously")
                 self.hardUnload()
                 self.encoder_sensor.reset_counts()
                 return
