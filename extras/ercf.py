@@ -2326,6 +2326,8 @@ class Ercf:
             motor="extruder"
         )
 
+        self.toolhead.wait_moves()
+
         self._log_always(f"Hard Unload: Extruder moved filament for {distanceMoved}")
         
         if distanceMoved != 0.0:
