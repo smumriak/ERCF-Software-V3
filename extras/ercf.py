@@ -2280,7 +2280,10 @@ class Ercf:
 
             movement = self._servo_up()
             if movement > self.ENCODER_MIN:
-                raise ErcfError("It may be time to get the pliers out! Filament appears to stuck somewhere")
+                self._log_always("Unexpected state %d in _unload_sequence()" % self.loaded_status)
+                self.hardUnload()
+                self.encoder_sensor.reset_counts()
+                return
 
             self.toolhead.wait_moves()
             self._log_info("Unloaded %.1fmm of filament" % self.encoder_sensor.get_distance())
