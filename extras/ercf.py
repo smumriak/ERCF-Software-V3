@@ -2508,7 +2508,7 @@ class Ercf:
 
             distanceMoved = abs(self.selector_stepper.get_position()[0])
 
-            self._log_always("Hard Unload: selector moved back {distanceMoved}")
+            self._log_always(f"Hard Unload: selector moved back {distanceMoved}")
             
             self.selector_stepper.do_set_position(0.0)
             self.selector_stepper.do_homing_move(
@@ -2522,10 +2522,11 @@ class Ercf:
 
             distanceMoved += abs(self.selector_stepper.get_position()[0])
 
-            self._log_always("Hard Unload: selector moved total {distanceMoved}")
+            self._log_always(f"Hard Unload: selector moved total {distanceMoved}")
 
             if distanceMoved < 10.0:
                 # filament still in encoder
+                self._log_always(f"Filament is still in encoder")
                 self._servo_down()
                 self.moveMotor(
                     distance= 5.0, 
