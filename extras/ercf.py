@@ -2459,6 +2459,35 @@ class Ercf:
             except:
                 self._log_always("Hard Unload: Unloading from encoder failed, but not to worry, this will be attempted again")
 
+            babyStep = 5.0
+            iterationsCount = int(tubeLength / babyStep) + 15
+
+            self._servo_down()
+
+            for i in range(iterationsCount):
+                distanceMoved = self.moveMotor(
+                    distance= -babyStep, 
+                    speed= 60.0,
+                    motor= "gear"
+                )
+
+                if distanceMoved == 0.0:
+                    break
+
+            self._servo_up()
+
+            self._log_always("Hard Unload: Blind unload from the tube should be done. Lets test if loading back reaches encoder")
+
+            distanceMoved = self.moveMotor(
+                distance= 30.0, 
+                speed= 60.0,
+                motor= "gear"
+            )
+
+            if distanceMoved == 0.0:
+                self._log_always("Hard Unload: No filmanet in the cart! This is baaad")
+                raise ErcfError("Hard Unload: Oopsiedoodle, I was unable to load a little bit of filament to encoder. This is PROBABLY A LEGIT ISSUE")
+
         # 3. test if filament is in selector via homing moves. if selector homing failed we still have filament loaded
         success = False
         for i in range(8):
