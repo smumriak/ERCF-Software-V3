@@ -2427,7 +2427,7 @@ class Ercf:
 
                 distanceMoved = self.moveMotor(
                     distance= 30.0, 
-                    speed= 60.0,
+                    speed= 20.0,
                     motor= "gear"
                 )
 
@@ -2451,11 +2451,17 @@ class Ercf:
             self._servo_down()
             distanceMoved = self.moveMotor(
                 distance= 5.0, 
-                speed= 60.0,
+                speed= 20.0,
                 motor= "gear"
             )
 
             if distanceMoved != 0.0:
+                self.moveMotor(
+                    distance= -distanceMoved, 
+                    speed= 20.0,
+                    motor= "gear"
+                )
+
                 # filament is in encoder
                 # 2.1. in baby steps extract the full tube distance checking on each step the distance traveled by encoder.
                 # 2.2. if encoder shows no movement proceed to homing checks
@@ -2526,7 +2532,7 @@ class Ercf:
                 self._log_always(f"Filament is still in encoder")
                 self._servo_down()
                 self.moveMotor(
-                    distance= 5.0, 
+                    distance= -5.0, 
                     speed= 60.0,
                     motor= "gear"
                 )
