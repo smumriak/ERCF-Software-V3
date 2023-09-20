@@ -2333,6 +2333,8 @@ class Ercf:
             self.gcode.run_script_from_command("ERCF_CALLBACK_ENABLE_FILAMENT_SENSOR")
 
     def hardUnloadImplementation(self):
+        tubeLength = self._get_calibration_ref()
+        
         self.toolhead.wait_moves()
         self._set_above_min_temp()
         
@@ -2400,7 +2402,6 @@ class Ercf:
             self._set_loaded_status(self.LOADED_STATUS_PARTIAL_HOMED_EXTRUDER)
         
             # 1.2. remove filament for the whole length of the tube, aka "fast" remove
-            tubeLength = self._get_calibration_ref()
             # this one probably will need to be rewritten too because I don't trust it either
             try:
                 self._unload_bowden(
