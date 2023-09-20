@@ -2380,21 +2380,18 @@ class Ercf:
                 self._unload_extruder()
             except:
                 self._log_always("Hard Unload: Unloading from extruder failed, but not to worry, we do this again and again")
-                # three attempts. if after three attempts it didn't work - we need manual intervention for real
-                self._servo_down()
-
-                for i in range(3):
+                # eight attempts. if after three attempts it didn't work - we need manual intervention for real
+                for i in range(8):
                     distanceMoved = self.moveMotor(
-                        distance= -120, 
+                        distance= -20, 
                         speed= self.nozzle_unload_speed,
-                        motor= "synced"
+                        motor= "extruder"
                     )
+
+                    self.toolhead.wait_moves()
 
                     if distanceMoved == 0.0:
                         break
-                
-                self.toolhead.wait_moves()
-                self.servo_up()
 
                 if distanceMoved != 0.0:
                     raise ErcfError("Hard Unload: Oopsiedoodle, I was unable to remove filament from extruder after three attempts. This is PROBABLY A LEGIT ISSUE")
@@ -2534,7 +2531,7 @@ class Ercf:
                     motor= "gear"
                 )
                 self.toolhead.wait_moves()
-                self.servo_up()
+                self._servo_up()
             else:
                 success = True
                 break
