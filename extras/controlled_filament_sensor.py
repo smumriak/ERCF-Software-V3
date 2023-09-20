@@ -1,6 +1,6 @@
 from . import filament_switch_sensor
 
-class ControlledFilamentSensor(filament_switch_sensor.SwitchSensor):
+class ControlledFilamentSensor(filament_switch_sensor.SwitchSensor, object):
     def __init__(self, config):
         super(ControlledFilamentSensor, self).__init__(config)
 
