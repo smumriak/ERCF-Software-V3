@@ -9,3 +9,6 @@ class ControlledFilamentSensor(filament_switch_sensor.RunoutHelper):
 
     def set_runout_pause(self, newValue):
         self.runout_pause = newValue
+
+def load_config_prefix(config):
+    return ControlledFilamentSensor(config)
