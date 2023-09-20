@@ -2426,8 +2426,6 @@ class Ercf:
                     if distanceMoved == 0.0:
                         break
 
-                self._servo_up()
-
                 self._log_always("Hard Unload: Blind unload from the tube should be done. Lets test if loading back reaches encoder")
 
                 distanceMoved = self.moveMotor(
@@ -2435,6 +2433,8 @@ class Ercf:
                     speed= 60.0,
                     motor= "gear"
                 )
+
+                self._servo_up()
 
                 if distanceMoved == 0.0:
                     self._log_always("Hard Unload: No filmanet in the cart! This is baaad")
@@ -2451,43 +2451,46 @@ class Ercf:
 
         # 2. else Check if filament in encoder
         else:
-            # 2.1. in baby steps extract the full parking distance checking on each step the distance traveled by encoder.
-            # 2.2. if encoder shows less movement than expected - proceed to parking
-            # 2.3. if encoder shows exact movement continue
-            # this one looks like a good piece, tho extremely unreadable
-            try:
-                self._unload_encoder(self.unload_buffer)
-            except:
-                self._log_always("Hard Unload: Unloading from encoder failed, but not to worry, this will be attempted again")
-
-            babyStep = 5.0
-            iterationsCount = int(tubeLength / babyStep) + 15
-
             self._servo_down()
-
-            for i in range(iterationsCount):
-                distanceMoved = self.moveMotor(
-                    distance= -babyStep, 
-                    speed= 60.0,
-                    motor= "gear"
-                )
-
-                if distanceMoved == 0.0:
-                    break
-
-            self._servo_up()
-
-            self._log_always("Hard Unload: Blind unload from the tube should be done. Lets test if loading back reaches encoder")
-
             distanceMoved = self.moveMotor(
-                distance= 30.0, 
+                distance= 5.0, 
                 speed= 60.0,
                 motor= "gear"
             )
 
-            if distanceMoved == 0.0:
-                self._log_always("Hard Unload: No filmanet in the cart! This is baaad")
-                raise ErcfError("Hard Unload: Oopsiedoodle, I was unable to load a little bit of filament to encoder. This is PROBABLY A LEGIT ISSUE")
+            if distanceMoved != 0.0:
+                # filament is in encoder
+                # 2.1. in baby steps extract the full tube distance checking on each step the distance traveled by encoder.
+                # 2.2. if encoder shows no movement proceed to homing checks
+                # 2.3. if encoder shows some movement continue
+                babyStep = 5.0
+                iterationsCount = int(tubeLength / babyStep) + 15
+
+                self._servo_down()
+
+                for i in range(iterationsCount):
+                    distanceMoved = self.moveMotor(
+                        distance= -babyStep, 
+                        speed= 60.0,
+                        motor= "gear"
+                    )
+
+                    if distanceMoved == 0.0:
+                        break
+
+                self._log_always("Hard Unload: Blind unload from the tube should be done. Lets test if loading back reaches encoder")
+
+                distanceMoved = self.moveMotor(
+                    distance= 30.0, 
+                    speed= 60.0,
+                    motor= "gear"
+                )
+
+                self._servo_up()
+
+                if distanceMoved == 0.0:
+                    self._log_always("Hard Unload: No filmanet in the cart! This is baaad")
+                    raise ErcfError("Hard Unload: Oopsiedoodle, I was unable to load a little bit of filament to encoder. This is PROBABLY A LEGIT ISSUE")
 
         # 3. test if filament is in selector via homing moves. if selector homing failed we still have filament loaded
         success = False
