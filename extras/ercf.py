@@ -2527,7 +2527,11 @@ class Ercf:
             )
             self.toolhead.dwell(0.2)
 
-            distanceMoved += (self.selector_stepper.steppers[0].get_mcu_position() - startPositionMCU) * stepLength
+            movedForward = (self.selector_stepper.steppers[0].get_mcu_position() - startPositionMCU) * stepLength
+            
+            self._log_always(f"Hard Unload: selector moved forward {movedForward}")
+            
+            distanceMoved += movedForward
 
             self._log_always(f"Hard Unload: selector moved total {distanceMoved}")
 
