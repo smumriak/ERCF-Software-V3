@@ -2497,9 +2497,12 @@ class Ercf:
 
         # 3. test if filament is in selector via homing moves. if selector homing failed we still have filament loaded
         success = False
+        stepLength = self.selector_stepper.steppers[0].get_step_dist()
+        
         for i in range(8):
             self._servo_up()
             self.selector_stepper.do_set_position(0.0)
+            startPositionMCU = self.selector_stepper.steppers[0].get_mcu_position()
             self.selector_stepper.do_homing_move(
                 movepos= 10.0,
                 speed= 60.0,
@@ -2509,11 +2512,12 @@ class Ercf:
             )
             self.toolhead.dwell(0.2)
 
-            distanceMoved = abs(self.selector_stepper.get_position()[0])
+            distanceMoved = (self.selector_stepper.steppers[0].get_mcu_position() - startPositionMCU) * stepLength
 
             self._log_always(f"Hard Unload: selector moved back {distanceMoved}")
             
             self.selector_stepper.do_set_position(0.0)
+            startPositionMCU = self.selector_stepper.steppers[0].get_mcu_position()
             self.selector_stepper.do_homing_move(
                 movepos= -10.0,
                 speed= 60.0,
@@ -2523,7 +2527,7 @@ class Ercf:
             )
             self.toolhead.dwell(0.2)
 
-            distanceMoved += abs(self.selector_stepper.get_position()[0])
+            distanceMoved += (self.selector_stepper.steppers[0].get_mcu_position() - startPositionMCU) * stepLength
 
             self._log_always(f"Hard Unload: selector moved total {distanceMoved}")
 
