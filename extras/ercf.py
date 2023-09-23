@@ -168,7 +168,10 @@ class Ercf:
         self.printer.register_event_handler("klippy:ready", self.handle_ready)
 
         # ERCF hardware (steppers, servo, encoder and optional toolhead sensor)
-        self.selector_stepper = self.gear_stepper = self.toolhead_sensor = self.encoder_sensor = self.servo = None
+        self.selector_stepper = None
+        self.gear_stepper = None
+        self.toolhead_sensor = None
+        self.encoder_sensor = None
 
         # Specific build parameters / tuning
         self.version = config.getfloat('version', 1.1)
@@ -184,7 +187,6 @@ class Ercf:
         self.tubePlay = config.getfloat('tube_play', 5.2)
         self.servo_up_angle = config.getfloat('servo_up_angle')
         self.servo_down_angle = config.getfloat('servo_down_angle')
-        self.servo_duration = config.getfloat('servo_duration', 0.2, minval=0.1)
         self.num_moves = config.getint('num_moves', 1, minval=1)
         self.apply_bowden_correction = config.getint('apply_bowden_correction', 0, minval=0, maxval=1)
         self.load_bowden_tolerance = config.getfloat('load_bowden_tolerance', 10., minval=1.)
@@ -523,9 +525,9 @@ class Ercf:
             raise self.config.error("Selector endstop must be specified")
 
         # Get servo and encoder
-        self.servo = self.printer.lookup_object('ercf_servo ercf_servo', None)
-        if not self.servo:
-            raise self.config.error("Missing [ercf_servo] definition in ercf_hardware.cfg\n%s" % self.UPGRADE_REMINDER)
+        servo = self.printer.lookup_object('servo ercf_servo', None)
+        if not servo:
+            raise self.config.error("Missing [servo] definition in ercf_hardware.cfg\n%s" % self.UPGRADE_REMINDER)
         self.encoder_sensor = self.printer.lookup_object('ercf_encoder ercf_encoder', None)
         if not self.encoder_sensor:
             raise self.config.error("Missing [ercf_encoder] definition in ercf_hardware.cfg\n%s" % self.UPGRADE_REMINDER)
@@ -1102,7 +1104,7 @@ class Ercf:
 #############################
 
     def _servo_set_angle(self, angle):
-        self.servo.set_value(angle=angle, duration=self.servo_duration)
+        self.gcode.run_script_from_command(f"SET_SERVO SERVO=ercf_servo angle={angle}")
         self.servo_state = self.SERVO_UNKNOWN_STATE
 
     def _servo_down(self):
@@ -1110,7 +1112,7 @@ class Ercf:
         if self.gate_selected == self.TOOL_BYPASS: return
         self._log_debug("Setting servo to down angle: %d" % (self.servo_down_angle))
         self.toolhead.wait_moves()
-        self.servo.set_value(angle=self.servo_down_angle, duration=self.servo_duration)
+        self.gcode.run_script_from_command(f"SET_SERVO SERVO=ercf_servo angle={self.servo_down_angle}")
         oscillations = 2
         for i in range(oscillations):
             self.toolhead.dwell(0.05)
@@ -1126,7 +1128,7 @@ class Ercf:
         self.toolhead.dwell(0.2)
         self.toolhead.wait_moves()
         initial_encoder_position = self.encoder_sensor.get_distance()
-        self.servo.set_value(angle=self.servo_up_angle, duration=self.servo_duration)
+        self.gcode.run_script_from_command(f"SET_SERVO SERVO=ercf_servo angle={self.servo_up_angle}")
         self.servo_state = self.SERVO_UP_STATE
 
         # Report on spring back in filament then reset counter
@@ -1146,6 +1148,7 @@ class Ercf:
             self.selector_stepper.do_enable(False)
             self.is_homed = False
             self._set_tool_selected(self.TOOL_UNKNOWN, True)
+        self.gcode.run_script_from_command(f"SET_SERVO SERVO=ercf_servo width=0")
 
 ### SERVO AND MOTOR GCODE FUNCTIONS
 
