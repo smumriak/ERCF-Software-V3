@@ -1104,7 +1104,7 @@ class Ercf:
 #############################
 
     def _servo_set_angle(self, angle):
-        self.gcode.run_script_from_command(f"SET_SERVO SERVO=ercf_servo angle={angle}")
+        self.gcode.run_script_from_command(f"set_servo servo=ercf_servo angle={angle}")
         self.servo_state = self.SERVO_UNKNOWN_STATE
 
     def _servo_down(self):
@@ -1112,7 +1112,7 @@ class Ercf:
         if self.gate_selected == self.TOOL_BYPASS: return
         self._log_debug("Setting servo to down angle: %d" % (self.servo_down_angle))
         self.toolhead.wait_moves()
-        self.gcode.run_script_from_command(f"SET_SERVO SERVO=ercf_servo angle={self.servo_down_angle}")
+        self.gcode.run_script_from_command(f"set_servo servo=ercf_servo angle={self.servo_down_angle}")
         oscillations = 2
         for i in range(oscillations):
             self.toolhead.dwell(0.05)
@@ -1128,7 +1128,8 @@ class Ercf:
         self.toolhead.dwell(0.2)
         self.toolhead.wait_moves()
         initial_encoder_position = self.encoder_sensor.get_distance()
-        self.gcode.run_script_from_command(f"SET_SERVO SERVO=ercf_servo angle={self.servo_up_angle}")
+        self.gcode.run_script_from_command(f"set_servo servo=ercf_servo angle={self.servo_up_angle}")
+        self.gcode.run_script_from_command(f"set_servo servo=ercf_servo width=0.0")
         self.servo_state = self.SERVO_UP_STATE
 
         # Report on spring back in filament then reset counter
@@ -1148,7 +1149,7 @@ class Ercf:
             self.selector_stepper.do_enable(False)
             self.is_homed = False
             self._set_tool_selected(self.TOOL_UNKNOWN, True)
-        self.gcode.run_script_from_command(f"SET_SERVO SERVO=ercf_servo width=0")
+        self.gcode.run_script_from_command(f"set_servo servo=ercf_servo width=0")
 
 ### SERVO AND MOTOR GCODE FUNCTIONS
 
